@@ -2,10 +2,11 @@ import cv2
 import numpy as np
 import glob
 import json
+import config
 
-rows = 10
-cols = 9
-square_size = 20.0
+rows = config.ROWS
+cols = config.COLS
+square_size = config.SQUARE_SIZE
 
 objp = np.zeros((rows*cols,3), np.float32)
 objp[:,:2] = np.mgrid[0:cols,0:rows].T.reshape(-1,2)
@@ -14,10 +15,16 @@ objp *= square_size
 objpoints = []
 imgpoints = []
 
-images = glob.glob("calib_images/*.jpg")
+images = glob.glob(f"{config.CALIB_IMAGE_DIR}/{config.IMAGE_EXTENSION}")
 
 if len(images) == 0:
     raise RuntimeError("No calibration images found")
+
+criteria = (
+    cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER,
+    config.CRITERIA_MAX_ITER,
+    config.CRITERIA_EPS
+)
 
 for fname in images:
 
@@ -33,18 +40,12 @@ for fname in images:
         corners2 = cv2.cornerSubPix(
             gray,
             corners,
-            (11,11),
-            (-1,-1),
-            (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER,30,0.001)
+            config.CORNER_WINDOW,
+            config.ZERO_ZONE,
+            criteria
         )
 
         imgpoints.append(corners2)
-
-        cv2.drawChessboardCorners(img,(cols,rows),corners2,ret)
-        cv2.imshow("Corners",img)
-        cv2.waitKey(200)
-
-cv2.destroyAllWindows()
 
 ret, K, dist, rvecs, tvecs = cv2.calibrateCamera(
     objpoints,
@@ -59,9 +60,5 @@ data = {
     "dist_coeff": dist.tolist()
 }
 
-with open("camera_params.json","w") as f:
+with open(config.CALIB_FILE,"w") as f:
     json.dump(data,f,indent=4)
-
-print("Calibration complete")
-print("Camera Matrix:\n",K)
-print("Distortion:\n",dist)

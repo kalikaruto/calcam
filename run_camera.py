@@ -1,17 +1,19 @@
 import cv2
 import numpy as np
 import json
+import config
 
-with open("camera_params.json") as f:
+with open(config.CALIB_FILE) as f:
     params = json.load(f)
 
 K = np.array(params["camera_matrix"])
 dist = np.array(params["dist_coeff"])
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(config.CAMERA_ID, cv2.CAP_V4L2)
 
-if not cap.isOpened():
-    raise RuntimeError("Camera not found")
+cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*config.PIXEL_FORMAT))
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, config.FRAME_WIDTH)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config.FRAME_HEIGHT)
 
 ret, frame = cap.read()
 h, w = frame.shape[:2]
@@ -41,7 +43,7 @@ while True:
     cv2.imshow("Raw",frame)
     cv2.imshow("Undistorted",undistorted)
 
-    if cv2.waitKey(1) & 0xFF == 27:
+    if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
 cap.release()
